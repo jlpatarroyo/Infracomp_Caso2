@@ -1,4 +1,101 @@
-
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.PrintWriter;
+import java.net.Socket;
+import java.util.Scanner;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+ 
 public class Cliente {
+
+	private static final String IP_MAQUINA = "192.168.56.1";
+	private static final int PUERTO = 9090;
+	private static final Logger LOGGER = Logger.getLogger("Logger_Cliente");
+	private static final String STAMP = "=CLIENTE=: ";
+	private static final String R = "Se ha recibido: ";
+
+	private BufferedReader in;
+	private PrintWriter out;
+	private Scanner scanner;
+
+	public void run() {
+		try
+		{
+			Socket socket = new Socket(IP_MAQUINA, PUERTO);
+			in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+			out = new PrintWriter(socket.getOutputStream(), true);
+			scanner = new Scanner(System.in);
+			
+			//Saludo
+			boolean saludo = false;
+			while(!saludo) {
+				//Mensaje cliente
+				System.out.println("Ingrese un mensaje: ");
+				String mensaje = scanner.nextLine();
+				LOGGER.log(Level.INFO, STAMP + mensaje);
+				out.println(mensaje);
+				//Respuesta servidor
+				String respuesta = in.readLine();
+				if(respuesta==null || respuesta.isEmpty()) {
+					LOGGER.log(Level.INFO, STAMP + "No se ha recibido respuesta");
+				}else {
+					LOGGER.log(Level.INFO, STAMP + R + respuesta);
+					saludo = true;
+				}
+			}
+			
+			//Algoritmos
+			boolean algoritmo = false;
+			while(!algoritmo) {
+				System.out.println("Ingrese el algoritmo de cifrado que desea utilizar");
+				System.out.println("Puede elegir entre " + ServidorPrincipal.AES + ", " + ServidorPrincipal.BLOWFISH
+						+ ", " + ServidorPrincipal.HMACMD5 + ", " + ServidorPrincipal.HMACSHA1 + ", " + 
+						ServidorPrincipal.HMACSHA256);
+				System.out.println("**Preste atención especial al uso de mayúsculas**");
+				String mensaje = scanner.nextLine();
+				if(mensaje == null || mensaje.isEmpty()) {
+					LOGGER.log(Level.WARNING, "Ingrese un mensaje");
+				}else {
+					//Verificación del algoritmo
+					String alg = "";
+					if(mensaje.contains(ServidorPrincipal.AES)) {
+						alg = ServidorPrincipal.AES;
+					}else if(mensaje.contains(ServidorPrincipal.BLOWFISH)) {
+						alg = ServidorPrincipal.BLOWFISH;
+					}else if(mensaje.contains(ServidorPrincipal.HMACMD5)) {
+						alg = ServidorPrincipal.HMACMD5;
+					}else if(mensaje.contains(ServidorPrincipal.HMACSHA1)) {
+						alg = ServidorPrincipal.HMACSHA1;
+					}else if(mensaje.contains(ServidorPrincipal.HMACSHA256)) {
+						alg = ServidorPrincipal.HMACSHA256;
+					}else {
+						LOGGER.log(Level.WARNING, STAMP + "Revise el algoritmo enviado");
+					}
+					LOGGER.log(Level.INFO, STAMP + "El algoritmo recibido fue " + alg);
+					out.println(alg);
+					
+					String respuesta = in.readLine();
+					if(respuesta.equals(ServidorPrincipal.R_OK)) {
+						algoritmo = true;
+						LOGGER.log(Level.INFO, R + respuesta);
+					}
+				}
+			}
+			
+			
+			//Terminación
+			socket.close();
+		}catch(Exception e) {
+			e.printStackTrace();
+		}
+	}
 	
+	public static void main(String[] args) {
+		Cliente cliente = new Cliente();
+		cliente.run();
+	}
+
+	
+
 }
