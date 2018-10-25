@@ -3,21 +3,38 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
+import java.math.BigInteger;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.security.KeyPair;
+import java.security.KeyPairGenerator;
 import java.security.KeyStore;
 import java.security.PrivateKey;
+import java.security.Provider;
 import java.security.Security;
+import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
+import java.sql.Date;
+import java.util.Calendar;
 import java.util.Scanner;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+
+import org.bouncycastle.asn1.ASN1ObjectIdentifier;
+import org.bouncycastle.asn1.x500.X500Name;
+import org.bouncycastle.asn1.x509.AlgorithmIdentifier;
+import org.bouncycastle.asn1.x509.BasicConstraints;
+import org.bouncycastle.asn1.x509.Certificate;
+import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter;
+import org.bouncycastle.cert.jcajce.JcaX509v3CertificateBuilder;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
-
-
-
-
+import org.bouncycastle.operator.ContentSigner;
+import org.bouncycastle.operator.DefaultDigestAlgorithmIdentifierFinder;
+import org.bouncycastle.operator.DefaultSignatureAlgorithmIdentifierFinder;
+import org.bouncycastle.operator.OperatorCreationException;
+import org.bouncycastle.operator.bc.BcRSAContentSignerBuilder;
+import org.bouncycastle.operator.jcajce.JcaContentSignerBuilder;
 
 public class ServidorPrincipal {
 	
@@ -38,23 +55,15 @@ public class ServidorPrincipal {
 	public static final String HMACSHA1 = "HMACSHA1";
 	public static final String HMACSHA256 = "HMACSHA256";
 	
-	public static void inicializarSeguridad() throws Exception {
+	public static void enviarCertificadoCliente() throws Exception {
 		
-		Security.addProvider(new BouncyCastleProvider());
-		CertificateFactory certFactory= CertificateFactory
-				  .getInstance("X.509", "BC");	
-		X509Certificate certificate = (X509Certificate) certFactory
-				  .generateCertificate(new FileInputStream("./data/Baeldung.cer"));	
-		
-		char[] keystorePassword = "password".toCharArray();
-		char[] keyPassword = "password".toCharArray();
-		
-		KeyStore keystore = KeyStore.getInstance("PKCS12");
-		keystore.load(new FileInputStream("Baeldung.p12"), keystorePassword);
-		
-		PrivateKey key = (PrivateKey) keystore.getKey("baeldung", keyPassword);	
 		
 	}
+	
+	
+	
+	
+	
 	
 	
 	
@@ -65,7 +74,6 @@ public class ServidorPrincipal {
 
 		try {
 			
-			inicializarSeguridad();
 			
 			
 			// Prueba de funcionamiento
