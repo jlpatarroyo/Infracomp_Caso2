@@ -1,14 +1,27 @@
 import java.io.BufferedReader;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.security.KeyStore;
+import java.security.PrivateKey;
+import java.security.Security;
+import java.security.cert.CertificateFactory;
+import java.security.cert.X509Certificate;
 import java.util.Scanner;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import org.bouncycastle.jce.provider.BouncyCastleProvider;
+
+
+
+
 
 public class ServidorPrincipal {
+	
+	private static final String IP_MAQUINA = "localhost";
 	
 	public static final String SALUDO = "HOLA";
 	public static final String R_OK = "OK";
@@ -25,12 +38,41 @@ public class ServidorPrincipal {
 	public static final String HMACSHA1 = "HMACSHA1";
 	public static final String HMACSHA256 = "HMACSHA256";
 	
+	public static void inicializarSeguridad() throws Exception {
+		
+		Security.addProvider(new BouncyCastleProvider());
+		CertificateFactory certFactory= CertificateFactory
+				  .getInstance("X.509", "BC");	
+		X509Certificate certificate = (X509Certificate) certFactory
+				  .generateCertificate(new FileInputStream("./data/Baeldung.cer"));	
+		
+		char[] keystorePassword = "password".toCharArray();
+		char[] keyPassword = "password".toCharArray();
+		
+		KeyStore keystore = KeyStore.getInstance("PKCS12");
+		keystore.load(new FileInputStream("Baeldung.p12"), keystorePassword);
+		
+		PrivateKey key = (PrivateKey) keystore.getKey("baeldung", keyPassword);	
+		
+	}
+	
+	
+	
 	public static void main(String[] args) throws IOException {
 		
 		ServerSocket listener = new ServerSocket(9090);
+		
 
 		try {
-			//Creación del socket, del writer y del reader
+			
+			inicializarSeguridad();
+			
+			
+			// Prueba de funcionamiento
+			int maxKeySize = javax.crypto.Cipher.getMaxAllowedKeyLength("AES");
+			System.out.println("Max Key Size for AES : " + maxKeySize);
+			
+			//Creaciï¿½n del socket, del writer y del reader
 			Socket socket = listener.accept();
 			PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
 			BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
@@ -41,7 +83,7 @@ public class ServidorPrincipal {
 				String mensaje = in.readLine();
 				LOGGER.log(Level.INFO, STAMP +  R + mensaje);
 				if(mensaje==null || mensaje.isEmpty()) {
-					LOGGER.log(Level.INFO, STAMP + "No se recibió ningún mensaje");
+					LOGGER.log(Level.INFO, STAMP + "No se recibiï¿½ ningï¿½n mensaje");
 				}else {
 					if(mensaje.equals(SALUDO)) {
 						LOGGER.log(Level.INFO, STAMP + R_OK);
@@ -57,7 +99,7 @@ public class ServidorPrincipal {
 			while(!alg) {
 				String recibido = in.readLine();
 				if(recibido == null || recibido.isEmpty()) {
-					LOGGER.log(Level.INFO, STAMP + "No se ha recibido ningún mensaje");
+					LOGGER.log(Level.INFO, STAMP + "No se ha recibido ningï¿½n mensaje");
 				}else{
 					algoritmo = recibido;
 					LOGGER.log(Level.INFO, STAMP + "El algoritmo recibido fue " + recibido);
@@ -67,6 +109,8 @@ public class ServidorPrincipal {
 			}
 			
 
+		}catch(Exception e){
+			e.printStackTrace();
 		}finally {
 			listener.close();
 		}

@@ -3,13 +3,19 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.Socket;
+import java.security.Security;
 import java.util.Scanner;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import org.bouncycastle.jce.provider.BouncyCastleProvider;
+
+
+
  
 public class Cliente {
+	
 
-	private static final String IP_MAQUINA = "192.168.56.1";
+	private static final String IP_MAQUINA = "localhost";
 	private static final int PUERTO = 9090;
 	private static final Logger LOGGER = Logger.getLogger("Logger_Cliente");
 	private static final String STAMP = "=CLIENTE=: ";
@@ -22,6 +28,7 @@ public class Cliente {
 	public void run() {
 		try
 		{
+			
 			Socket socket = new Socket(IP_MAQUINA, PUERTO);
 			in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
 			out = new PrintWriter(socket.getOutputStream(), true);
@@ -52,12 +59,12 @@ public class Cliente {
 				System.out.println("Puede elegir entre " + ServidorPrincipal.AES + ", " + ServidorPrincipal.BLOWFISH
 						+ ", " + ServidorPrincipal.HMACMD5 + ", " + ServidorPrincipal.HMACSHA1 + ", " + 
 						ServidorPrincipal.HMACSHA256);
-				System.out.println("**Preste atención especial al uso de mayúsculas**");
+				System.out.println("**Preste atenciï¿½n especial al uso de mayï¿½sculas**");
 				String mensaje = scanner.nextLine();
 				if(mensaje == null || mensaje.isEmpty()) {
 					LOGGER.log(Level.WARNING, "Ingrese un mensaje");
 				}else {
-					//Verificación del algoritmo
+					//Verificaciï¿½n del algoritmo
 					String alg = "";
 					if(mensaje.contains(ServidorPrincipal.AES)) {
 						alg = ServidorPrincipal.AES;
@@ -84,7 +91,7 @@ public class Cliente {
 			}
 			
 			
-			//Terminación
+			//Terminaciï¿½n
 			socket.close();
 		}catch(Exception e) {
 			e.printStackTrace();
