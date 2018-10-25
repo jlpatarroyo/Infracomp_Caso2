@@ -12,6 +12,8 @@ import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.sql.Date;
 import java.util.Calendar;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import org.bouncycastle.asn1.ASN1ObjectIdentifier;
 import org.bouncycastle.asn1.x500.X500Name;
@@ -25,27 +27,50 @@ import org.bouncycastle.operator.jcajce.JcaContentSignerBuilder;
 
 public class GeneradorDeCertificados {
 
+	private static final Logger LOGGER = Logger.getLogger("Logger_Certificados");
 
 
-
-	public static void guardarLlaves(String duenio, Key llavePublica, Key llavePrivada)
+	public static void guardarLlaves(String duenio, Key llavePublica, Key llavePrivada) 
 	{
-
+		FileOutputStream out = null;
+		FileOutputStream out2 = null;
 		try {
 			String outFile = "./data/" + duenio; 
-			FileOutputStream out = new FileOutputStream(outFile + ".key");
+			out = new FileOutputStream(outFile + ".key");
 			out.write(llavePublica.getEncoded());
-		} catch (Exception e) {
 
+			String outFile2 = "./data/" + duenio; 
+			out2 = new FileOutputStream(outFile2 + ".key");
+			out.write(llavePrivada.getEncoded());
+
+		} catch (Exception e) {
+			LOGGER.log(Level.WARNING, "No se pudo guardar las llaves");
+		} finally {
+
+			try{
+				out.close();
+				out2.close();
+			}
+			catch(Exception e){
+				LOGGER.log(Level.WARNING, e.getMessage());
+			}
 		}
 
 	}
 
-	public static KeyPair generarLlaves(String algoritmo) throws NoSuchAlgorithmException {
+	public static KeyPair generarLlaves() {
 
-		KeyPairGenerator kpg = KeyPairGenerator.getInstance("RSA");
-		kpg.initialize(2048);
-		KeyPair kp = kpg.generateKeyPair();
+		KeyPairGenerator kpg = null;
+		KeyPair kp = null;
+		try{
+			kpg = KeyPairGenerator.getInstance("RSA");
+			kpg.initialize(2048);
+			kp = kpg.generateKeyPair();
+		}
+
+		catch(NoSuchAlgorithmException e){
+			LOGGER.log(Level.WARNING, "No se pudo generar las llaves, mal algoritmo");
+		}
 
 		return kp;
 
@@ -86,4 +111,14 @@ public class GeneradorDeCertificados {
 		return new JcaX509CertificateConverter().setProvider(bcProvider).getCertificate(certBuilder.build(contentSigner));
 	}	
 
+	public static void main(String[] args) {
+
+		KeyPair llavesGeneradasCliente = generarLlaves();
+		KeyPair llavesGeneradasServidor = generarLlaves();
+		
+		guardarLlaves("cliente", llavesGeneradasCliente.getPublic(), llavesGeneradasCliente.getPrivate());
+		guardarLlaves("servidor", llavesGeneradasCliente.getPublic(), llavesGeneradasCliente.getPrivate());
+		System.out.println("terminé");
+
+	}
 }
