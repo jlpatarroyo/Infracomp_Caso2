@@ -6,6 +6,7 @@ import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.math.BigInteger;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -21,6 +22,7 @@ import java.security.PublicKey;
 import java.security.Security;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
+import java.security.spec.InvalidKeySpecException;
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.security.spec.X509EncodedKeySpec;
 import java.sql.Date;
@@ -34,32 +36,54 @@ import org.bouncycastle.asn1.x509.BasicConstraints;
 import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter;
 import org.bouncycastle.cert.jcajce.JcaX509v3CertificateBuilder;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
+import org.bouncycastle.openssl.PEMWriter;
 import org.bouncycastle.operator.ContentSigner;
 import org.bouncycastle.operator.OperatorCreationException;
 import org.bouncycastle.operator.jcajce.JcaContentSignerBuilder;
 import org.bouncycastle.util.io.pem.PemObject;
+import org.bouncycastle.util.io.pem.PemReader;
 import org.bouncycastle.util.io.pem.PemWriter;
 
 public class GeneradorDeCertificados {
 
+	public final static String SERVIDOR = "servidor";
+
+	public final static String CLIENTE = "cliente";
+	
+	public final static String BASE_PATH = "./data/";
+
 	private static final Logger LOGGER = Logger.getLogger("Logger_Certificados");
+	
+	private final static Provider bcProvider = new BouncyCastleProvider();
 
 
+	/**
+	 * 
+	 * @param duenio
+	 * @param llavePublica
+	 * @param llavePrivada
+	 */
 	public static void guardarLlaves(String duenio, Key llavePublica, Key llavePrivada) 
 	{
-		FileOutputStream out = null;
-		FileOutputStream out2 = null;
+		FileWriter out = null;
+		FileWriter out2 = null;
 		try {
 			String outFile = "./data/" + duenio + "k+" + ".key"; 
-			out = new FileOutputStream(outFile);
-			out.write(llavePublica.getEncoded());
+			out = new FileWriter(outFile);
+			PEMWriter writerPublicKey = new PEMWriter(out);
+			writerPublicKey.writeObject(new PemObject("publicKey"+duenio,llavePublica.getEncoded()));
 
 			String outFile2 = "./data/" + duenio + "k-" + ".key"; 
-			out2 = new FileOutputStream(outFile2);
-			out.write(llavePrivada.getEncoded());
+			out2 = new FileWriter(outFile2);
+			PEMWriter writerPrivateKey = new PEMWriter(out2);
+			writerPrivateKey.writeObject(new PemObject("privateKey"+duenio, llavePrivada.getEncoded()));
+
+			writerPublicKey.close();
+			writerPrivateKey.close();
 
 		} catch (Exception e) {
 			LOGGER.log(Level.WARNING, "No se pudo guardar las llaves");
+			e.printStackTrace();
 		} finally {
 
 			try{
@@ -72,7 +96,11 @@ public class GeneradorDeCertificados {
 		}
 
 	}
-
+	
+	/**
+	 * 
+	 * @return
+	 */
 	public static KeyPair generarLlaves() {
 
 		KeyPairGenerator kpg = null;
@@ -81,6 +109,7 @@ public class GeneradorDeCertificados {
 			kpg = KeyPairGenerator.getInstance("RSA");
 			kpg.initialize(2048);
 			kp = kpg.generateKeyPair();
+			LOGGER.info("RSA key pair generated.");
 		}
 
 		catch(NoSuchAlgorithmException e){
@@ -91,10 +120,83 @@ public class GeneradorDeCertificados {
 
 	}
 
+	/**
+	 * 
+	 * @param duenio
+	 * @return
+	 */
+	public static KeyPair recuperarLlavesDeArchivo(String duenio) {	
+
+		
+		KeyPair llaves = null;
+		
+		try {
+			KeyFactory factory = KeyFactory.getInstance("RSA", "BC");
+			
+			PrivateKey priv = recuperarLlavePrivada(factory, BASE_PATH + duenio + "k-.key");
+			PublicKey pub = recuperarLlavePublica(factory, BASE_PATH + duenio + "k+.key");
+			
+
+			llaves = new KeyPair(pub, priv);
+			LOGGER.info("Se han recuperado las llaves de " + duenio);
+			
+			
+		} catch (Exception e) {
+			e.printStackTrace();
+			LOGGER.log(Level.WARNING, "No es posible cargar las llaves");
+		}
+
+
+		return llaves;
+	}
+	
+	/**
+	 * 
+	 * @param factory
+	 * @param filename
+	 * @return
+	 * @throws InvalidKeySpecException
+	 * @throws FileNotFoundException
+	 * @throws IOException
+	 */
+	private static PrivateKey recuperarLlavePrivada(KeyFactory factory, String filename) throws InvalidKeySpecException, FileNotFoundException, IOException {
+		PemReader pemReader = new PemReader(new InputStreamReader(new FileInputStream(filename)));
+				
+		byte[] content = pemReader.readPemObject().getContent();
+		PKCS8EncodedKeySpec privKeySpec = new PKCS8EncodedKeySpec(content);
+		return factory.generatePrivate(privKeySpec);
+	}
+	
+	/**
+	 * Método encargado de recuperar la llave publica de un archivo PEM dado por parametro. 
+	 * @param factory
+	 * @param filename
+	 * @return
+	 * @throws InvalidKeySpecException
+	 * @throws FileNotFoundException
+	 * @throws IOException
+	 */
+	private static PublicKey recuperarLlavePublica(KeyFactory factory, String filename) throws InvalidKeySpecException, FileNotFoundException, IOException {
+		PemReader pemReader = new PemReader(new InputStreamReader(new FileInputStream(filename)));	
+		
+		byte[] content = pemReader.readPemObject().getContent();
+		X509EncodedKeySpec pubKeySpec = new X509EncodedKeySpec(content);
+		return factory.generatePublic(pubKeySpec);
+	}
+
+	/**
+	 * 
+	 * @param keyPair
+	 * @param subjectDN
+	 * @return
+	 * @throws OperatorCreationException
+	 * @throws CertificateException
+	 * @throws IOException
+	 */
 	public static X509Certificate crearCertificado(KeyPair keyPair, String subjectDN) throws OperatorCreationException, CertificateException, IOException
 	{
-		Provider bcProvider = new BouncyCastleProvider();
-		Security.addProvider(bcProvider);
+		Security.addProvider(bcProvider);	
+		LOGGER.info("BouncyCastle provider added.");
 
 		long now = System.currentTimeMillis();
 		Date startDate = new Date(now);
@@ -127,66 +229,38 @@ public class GeneradorDeCertificados {
 	}	
 
 	public static void main(String[] args) {
-			
-//		KeyPair llavesGeneradasCliente = generarLlaves();
-//		KeyPair llavesGeneradasServidor = generarLlaves();
-//		
-//		guardarLlaves("cliente", llavesGeneradasCliente.getPublic(), llavesGeneradasCliente.getPrivate());
-//		guardarLlaves("servidor", llavesGeneradasCliente.getPublic(), llavesGeneradasCliente.getPrivate());
-//		System.out.println("termin�");
+
+		Security.addProvider(bcProvider);	
 		
+		KeyPair llavesGeneradasCliente = generarLlaves();
+		KeyPair llavesGeneradasServidor = generarLlaves();
+
+		guardarLlaves("cliente", llavesGeneradasCliente.getPublic(), llavesGeneradasCliente.getPrivate());
+		guardarLlaves("servidor", llavesGeneradasServidor.getPublic(), llavesGeneradasServidor.getPrivate());
+
 		try {
-			//Cliente
-			
-			KeyFactory kf = KeyFactory.getInstance("RSA");
-			
-			// Llaves del cliente
-			File fClientePub = new File("./data/clientek+.key");
-			byte[] bytesClientePub = Files.readAllBytes(fClientePub.toPath());
-			X509EncodedKeySpec ksClientePub = new X509EncodedKeySpec(bytesClientePub);
-			PublicKey keyClientpub = kf.generatePublic(ksClientePub);
-			
-	
-			File fClientePriv = new File("./data/clientek-.key");
-			byte[] bytesClientePriv = Files.readAllBytes(fClientePriv.toPath());
-			PKCS8EncodedKeySpec ksClientePriv = new PKCS8EncodedKeySpec(bytesClientePriv);
-			PrivateKey keyClientPriv = kf.generatePrivate(ksClientePriv);
-			
-			
-			
-			
-			// Llaves del servidor
-			File fServidorPub = new File("./data/servidork+.key");
-			byte[] bytesServidorPub = Files.readAllBytes(fServidorPub.toPath());
-			X509EncodedKeySpec ksServidorPub = new X509EncodedKeySpec(bytesServidorPub);
-			PublicKey keyServidorPub = kf.generatePublic(ksServidorPub);
-			
-			
-			
-			File fServidorPriv = new File("./data/servidork-.key");
-			byte[] bytesServidorPriv = Files.readAllBytes(fServidorPriv.toPath());
-			PKCS8EncodedKeySpec ksServidorPriv = new PKCS8EncodedKeySpec(bytesServidorPriv);
-			PrivateKey keyServidorPriv = kf.generatePrivate(ksServidorPriv);
-			
-			
-			KeyPair kpCliente = new KeyPair(keyClientpub, keyClientPriv);
-			KeyPair kpServidor = new KeyPair(keyServidorPub, keyServidorPriv);
-			
-			
-			// Certificados
-			X509Certificate certificadoCliente = crearCertificado(kpCliente, "autenticar");
-			X509Certificate certificadoServidor = crearCertificado(kpServidor, "autenticar");
-			
+			// Recuperación de llaves
+			KeyPair llavesCliente = recuperarLlavesDeArchivo(CLIENTE);
+			KeyPair llavesServidor = recuperarLlavesDeArchivo(SERVIDOR);
+		
+
+			//Certificados
+			X509Certificate certificadoCliente = crearCertificado(llavesCliente, "autenticar");
+			X509Certificate certificadoServidor = crearCertificado(llavesServidor, "autenticar");
+
 			File archivoCliente = new File("./data/certificadoCliente");
 			PemWriter writerCliente = new PemWriter(new FileWriter(archivoCliente));
 			writerCliente.writeObject(new PemObject("CERTIFICATE", certificadoCliente.getEncoded()));
-			
+
 			File archivoServidor = new File("./data/certificadoServidor");
 			PemWriter writerServidor = new PemWriter(new FileWriter(archivoServidor));
 			writerServidor.writeObject(new PemObject("CERTIFICATE", certificadoServidor.getEncoded()));
-			
+
+
+
 		} catch (Exception e) {
 			// TODO: handle exception
+			e.printStackTrace();
 		}
 
 	}
