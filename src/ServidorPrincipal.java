@@ -31,6 +31,9 @@ import org.bouncycastle.asn1.x509.BasicConstraints;
 import org.bouncycastle.asn1.x509.Certificate;
 import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter;
 import org.bouncycastle.cert.jcajce.JcaX509v3CertificateBuilder;
+import org.bouncycastle.crypto.BlockCipher;
+import org.bouncycastle.crypto.engines.BlowfishEngine;
+import org.bouncycastle.jcajce.provider.symmetric.Blowfish;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.bouncycastle.operator.ContentSigner;
 import org.bouncycastle.operator.DefaultDigestAlgorithmIdentifierFinder;
@@ -124,6 +127,11 @@ public class ServidorPrincipal {
 			LOGGER.log(Level.INFO, "Se ha verificado el certificado del usuario correctamente");
 			
 			enviarCertificado(out);
+			
+			
+			//Encriptaci�n del mensaje
+			BlowfishEngine bfe = new BlowfishEngine();
+
 			
 
 		}catch(Exception e){
