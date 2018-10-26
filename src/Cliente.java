@@ -3,17 +3,22 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.Socket;
+import java.security.PublicKey;
 import java.security.Security;
+import java.security.cert.X509Certificate;
 import java.util.Scanner;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import javax.xml.bind.DatatypeConverter;
+
+
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 
 
 
- 
+
 public class Cliente {
-	
+
 
 	private static final String IP_MAQUINA = "localhost";
 	private static final int PUERTO = 9090;
@@ -28,12 +33,12 @@ public class Cliente {
 	public void run() {
 		try
 		{
-			
+
 			Socket socket = new Socket(IP_MAQUINA, PUERTO);
 			in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
 			out = new PrintWriter(socket.getOutputStream(), true);
 			scanner = new Scanner(System.in);
-			
+
 			//Saludo
 			boolean saludo = false;
 			while(!saludo) {
@@ -51,7 +56,7 @@ public class Cliente {
 					saludo = true;
 				}
 			}
-			
+
 			//Algoritmos
 			boolean algoritmo = false;
 			while(!algoritmo) {
@@ -81,7 +86,7 @@ public class Cliente {
 					}
 					LOGGER.log(Level.INFO, STAMP + "El algoritmo recibido fue " + alg);
 					out.println(alg);
-					
+
 					String respuesta = in.readLine();
 					if(respuesta.equals(ServidorPrincipal.R_OK)) {
 						algoritmo = true;
@@ -90,19 +95,35 @@ public class Cliente {
 				}
 			}
 			
+			enviarCertificado(out);
+
+			String certificadoRecibido = in.readLine();
+			PublicKey llavePublicaServidor = GeneradorDeCertificados.recuperarLlavePublica("./data/servidork+.key");
 			
+			GeneradorDeCertificados.verificarCertificado(certificadoRecibido, llavePublicaServidor);
+			LOGGER.log(Level.INFO, "Se ha verificado el certificado del servidor correctamente");
+
 			//Terminaci�n
 			socket.close();
 		}catch(Exception e) {
 			e.printStackTrace();
 		}
 	}
-	
+
+	public static void enviarCertificado(PrintWriter out) throws Exception {
+
+		X509Certificate certificadoCliente = GeneradorDeCertificados.crearCertificado(GeneradorDeCertificados.recuperarLlavesDeArchivo(GeneradorDeCertificados.CLIENTE));
+		byte[] certificadoEnBytes = certificadoCliente.getEncoded();
+		String certificadoEnString = DatatypeConverter.printHexBinary(certificadoEnBytes);
+		out.println(certificadoEnString);
+	}
+
+
 	public static void main(String[] args) {
 		Cliente cliente = new Cliente();
 		cliente.run();
 	}
 
-	
+
 
 }

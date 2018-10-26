@@ -11,6 +11,7 @@ import java.security.KeyPairGenerator;
 import java.security.KeyStore;
 import java.security.PrivateKey;
 import java.security.Provider;
+import java.security.PublicKey;
 import java.security.Security;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
@@ -20,6 +21,8 @@ import java.util.Calendar;
 import java.util.Scanner;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+
+import javax.xml.bind.DatatypeConverter;
 
 import org.bouncycastle.asn1.ASN1ObjectIdentifier;
 import org.bouncycastle.asn1.x500.X500Name;
@@ -54,17 +57,14 @@ public class ServidorPrincipal {
 	public static final String HMACMD5 = "HMACMD5";
 	public static final String HMACSHA1 = "HMACSHA1";
 	public static final String HMACSHA256 = "HMACSHA256";
-	
-	public static void enviarCertificadoCliente() throws Exception {
 		
-		
+	public static void enviarCertificado(PrintWriter out) throws Exception {
+
+		X509Certificate certificadoCliente = GeneradorDeCertificados.crearCertificado(GeneradorDeCertificados.recuperarLlavesDeArchivo(GeneradorDeCertificados.SERVIDOR));
+		byte[] certificadoEnBytes = certificadoCliente.getEncoded();
+		String certificadoEnString = DatatypeConverter.printHexBinary(certificadoEnBytes);
+		out.println(certificadoEnString);
 	}
-	
-	
-	
-	
-	
-	
 	
 	
 	public static void main(String[] args) throws IOException {
@@ -115,6 +115,15 @@ public class ServidorPrincipal {
 					alg = true;
 				}
 			}
+			
+			//Recibiendo el certificado
+			String certificadoRecibido = in.readLine();
+			PublicKey llavePublicaCliente = GeneradorDeCertificados.recuperarLlavePublica("./data/clientek+.key");
+			
+			GeneradorDeCertificados.verificarCertificado(certificadoRecibido, llavePublicaCliente);
+			LOGGER.log(Level.INFO, "Se ha verificado el certificado del usuario correctamente");
+			
+			enviarCertificado(out);
 			
 
 		}catch(Exception e){
