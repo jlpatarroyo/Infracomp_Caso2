@@ -1,3 +1,5 @@
+
+
 import java.io.BufferedReader;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -42,6 +44,7 @@ import org.bouncycastle.operator.OperatorCreationException;
 import org.bouncycastle.operator.bc.BcRSAContentSignerBuilder;
 import org.bouncycastle.operator.jcajce.JcaContentSignerBuilder;
 
+
 public class ServidorPrincipal {
 	
 	private static final String IP_MAQUINA = "localhost";
@@ -69,19 +72,11 @@ public class ServidorPrincipal {
 		out.println(certificadoEnString);
 	}
 	
-	
 	public static void main(String[] args) throws IOException {
 		
 		ServerSocket listener = new ServerSocket(9090);
-		
-
-		try {
+		try {		
 			
-			
-			
-			// Prueba de funcionamiento
-			int maxKeySize = javax.crypto.Cipher.getMaxAllowedKeyLength("AES");
-			System.out.println("Max Key Size for AES : " + maxKeySize);
 			
 			//Creaci�n del socket, del writer y del reader
 			Socket socket = listener.accept();
